@@ -1,30 +1,45 @@
 import express from "express";
-import bodyParser from "body-parser";
-import jwt from "jsonwebtoken";
-import dotenv from 'dotenv';
-
+import cors from "cors";
+import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+app.use(cors());
+app.use(express.json());
 
-const USERNAME = process.env.LOGIN_ID;
-const PASSWORD = process.env.LOGIN_PW;
-const SECRET_KEY = process.env.JWT_SECRET || "temp_secret";
+const { SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, PORT = 3000 } = process.env;
 
-app.use(bodyParser.json());
+if (!SPOTIFY_CLIENT_ID || !SPOTIFY_CLIENT_SECRET) {
+  console.error("SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET 필요");
+  process.exit(1);
+}
 
-app.post("/login", (req, res) => {
-  const { username, password } = req.body;
+const TOKEN_URL = "https://accounts.spotify.com/api/token";
+const basic = Buffer
+  .from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`)
+  .toString("base64");
 
-  if (username === USERNAME && password === PASSWORD) {
-    const token = jwt.sign({ username }, SECRET_KEY, { expiresIn: "1h" });
-    return res.json({ token });
+// 프론트가 호출할 엔드포인트: 서버가 client_credentials로 토큰 받아서 반환
+app.get("/spotify/token", async (req, res) => {
+  try {
+    const body = new URLSearchParams({ grant_type: "client_credentials" });
+    const r = await fetch(TOKEN_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${basic}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body,
+    });
+    if (!r.ok) {
+      const err = await r.text();
+      return res.status(500).json({ error: "spotify_token_error", detail: err });
+    }
+    const data = await r.json(); 
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: "server_error", detail: String(e) });
   }
-
-  res.status(401).json({ message: "Invalid credentials" });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running`);
-});
+app.listen(PORT, () => console.log(`✅ http://localhost:${PORT}`));
