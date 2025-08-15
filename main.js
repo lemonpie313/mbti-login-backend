@@ -19,7 +19,6 @@ const basic = Buffer
   .from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`)
   .toString("base64");
 
-// 프론트가 호출할 엔드포인트: 서버가 client_credentials로 토큰 받아서 반환
 app.get("/spotify/token", async (req, res) => {
   try {
     const body = new URLSearchParams({ grant_type: "client_credentials" });
@@ -42,4 +41,4 @@ app.get("/spotify/token", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`✅ http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`http://localhost:${PORT}`));
